@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Onda Elétrica · Ponto</title>
 
-<!-- Comportamento de app ao adicionar à tela de início (Android e iPhone) -->
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -21,10 +20,10 @@
     --surface:#16233A;
     --surface-2:#1D2C47;
     --line: rgba(234,240,246,0.08);
-    --accent:#F2B705;      /* voltagem / ação principal */
+    --accent:#F2B705;
     --accent-soft: rgba(242,183,5,0.14);
-    --live:#3FD8C4;        /* pulso ao vivo */
-    --warn:#E4572E;        /* parar / desligar */
+    --live:#3FD8C4;
+    --warn:#E4572E;
     --text:#EAF0F6;
     --text-muted:#8FA0BC;
   }
@@ -59,9 +58,18 @@
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root">
+  <div id="debug-fallback" style="padding: 24px; text-align: center; color: #8FA0BC; margin-top: 60px;">
+    Iniciando aplicativo...
+  </div>
+</div>
 
-<!-- Firebase (SDK modular via CDN, sem instalar nada) -->
+<!-- React sem build (UMD) -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<!-- Firebase SDK modular via CDN -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import {
@@ -72,7 +80,6 @@
     onSnapshot, query, orderBy, limit, serverTimestamp, Timestamp
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // >>> COLE AQUI A CONFIGURAÇÃO DO SEU PROJETO FIREBASE <<<
   const firebaseConfig = {
     apiKey: "AIzaSyDWmvKHfcVWPTmC9ek3LQ0JT_jqy6_M65c",
     authDomain: "ponto-onda-eletrica-teste.firebaseapp.com",
@@ -82,28 +89,27 @@
     appId: "1:280850562432:web:c98d3b3288932055f41565"
   };
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+  try {
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-  window.fb = {
-    auth, db,
-    signInAnonymously, onAuthStateChanged,
-    collection, addDoc, updateDoc, doc, setDoc, getDoc,
-    onSnapshot, query, orderBy, limit, serverTimestamp, Timestamp
-  };
-  window.dispatchEvent(new Event("fb-ready"));
+    window.fb = {
+      auth, db,
+      signInAnonymously, onAuthStateChanged,
+      collection, addDoc, updateDoc, doc, setDoc, getDoc,
+      onSnapshot, query, orderBy, limit, serverTimestamp, Timestamp
+    };
+    window.dispatchEvent(new Event("fb-ready"));
+  } catch (err) {
+    document.getElementById("debug-fallback").innerHTML = 
+      "<span style='color:#E4572E;font-weight:bold;'>Erro ao conectar no Firebase:</span><br><br>" + err.message;
+  }
 </script>
-
-<!-- React sem build (UMD) -->
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
-// ---------- utilidades ----------
 function fmtHMS(totalSeconds){
   const s = Math.max(0, Math.floor(totalSeconds));
   const h = String(Math.floor(s/3600)).padStart(2,"0");
@@ -119,7 +125,7 @@ function fmtHM(totalSeconds){
 }
 function startOfWeek(d){
   const x = new Date(d);
-  const day = x.getDay(); // 0=domingo
+  const day = x.getDay();
   x.setHours(0,0,0,0);
   x.setDate(x.getDate() - day);
   return x;
@@ -130,7 +136,6 @@ function startOfMonth(d){
   return x;
 }
 
-// ---------- onda decorativa (estado ligado/desligado) ----------
 function WaveLine({active, color}){
   return (
     <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none" style={{display:"block"}}>
@@ -146,7 +151,6 @@ function WaveLine({active, color}){
   );
 }
 
-// ---------- tela de login ----------
 function LoginScreen({onEnter, busy}){
   const [name, setName] = useState("");
   return (
@@ -190,7 +194,6 @@ function LoginScreen({onEnter, busy}){
   );
 }
 
-// ---------- cabeçalho ----------
 function Header({user, onLogout}){
   return (
     <div style={{
@@ -209,7 +212,6 @@ function Header({user, onLogout}){
   );
 }
 
-// ---------- aba: ponto ----------
 function PontoTab({user, activeSession, elapsed, onStart, onStop, myTodaySeconds, myTotalSeconds, busy}){
   const running = !!activeSession;
   return (
@@ -255,7 +257,6 @@ function PontoTab({user, activeSession, elapsed, onStart, onStop, myTodaySeconds
   );
 }
 
-// ---------- aba: mural ----------
 function MuralTab({events}){
   return (
     <div className="fade-in" style={{flex:1, padding:"20px 20px 8px", overflowY:"auto"}}>
@@ -291,7 +292,6 @@ function MuralTab({events}){
   );
 }
 
-// ---------- aba: ranking ----------
 function RankingTab({sessions, user, activeSession, elapsed}){
   const [period, setPeriod] = useState("semana");
   const [customStart, setCustomStart] = useState("");
@@ -378,7 +378,6 @@ function RankingTab({sessions, user, activeSession, elapsed}){
   );
 }
 
-// ---------- navegação inferior ----------
 function BottomNav({tab, setTab}){
   const items = [
     { key:"ponto", label:"Ponto" },
@@ -403,7 +402,6 @@ function BottomNav({tab, setTab}){
   );
 }
 
-// ---------- toast de evento ao vivo ----------
 function LiveToast({event}){
   if(!event) return null;
   return (
@@ -417,14 +415,13 @@ function LiveToast({event}){
   );
 }
 
-// ---------- app principal ----------
 function App(){
   const [fbReady, setFbReady] = useState(!!window.fb);
   const [user, setUser] = useState(null);
   const [loginBusy, setLoginBusy] = useState(false);
   const [tab, setTab] = useState("ponto");
 
-  const [activeSession, setActiveSession] = useState(null); // {id, startTime}
+  const [activeSession, setActiveSession] = useState(null);
   const [elapsed, setElapsed] = useState(0);
   const [actionBusy, setActionBusy] = useState(false);
 
@@ -440,7 +437,6 @@ function App(){
     return () => window.removeEventListener("fb-ready", h);
   }, []);
 
-  // restaurar usuário salvo neste aparelho
   useEffect(()=>{
     if(!fbReady) return;
     const saved = localStorage.getItem("onda-user");
@@ -448,6 +444,8 @@ function App(){
       const parsed = JSON.parse(saved);
       window.fb.signInAnonymously(window.fb.auth).then(async (cred) => {
         setUser({ uid: cred.user.uid, name: parsed.name });
+      }).catch(err => {
+        alert("Erro no login anônimo: " + err.message);
       });
     }
   }, [fbReady]);
@@ -461,7 +459,7 @@ function App(){
       localStorage.setItem("onda-user", JSON.stringify({ name }));
       setUser({ uid, name });
     } catch(e){
-      alert("Não deu pra entrar agora. Confira sua internet e tente de novo.\n\n" + e.message);
+      alert("Não deu pra entrar agora. Verifique a internet e o Auth Anônimo no Firebase:\n\n" + e.message);
     } finally {
       setLoginBusy(false);
     }
@@ -474,7 +472,6 @@ function App(){
     setActiveSession(null);
   }
 
-  // restaurar sessão ativa (se o app foi fechado com o cronômetro rodando)
   useEffect(()=>{
     if(!user) return;
     const saved = localStorage.getItem("onda-active-session");
@@ -484,7 +481,6 @@ function App(){
     }
   }, [user]);
 
-  // cronômetro
   useEffect(()=>{
     if(!activeSession){ setElapsed(0); return; }
     const tick = () => setElapsed(Math.floor((Date.now() - new Date(activeSession.startTime).getTime())/1000));
@@ -493,7 +489,6 @@ function App(){
     return () => clearInterval(id);
   }, [activeSession]);
 
-  // ouvir mural (eventos) em tempo real
   useEffect(()=>{
     if(!fbReady || !user) return;
     const q = window.fb.query(
@@ -523,7 +518,6 @@ function App(){
     return () => unsub();
   }, [fbReady, user]);
 
-  // ouvir sessões (para ranking e totais)
   useEffect(()=>{
     if(!fbReady || !user) return;
     const q = window.fb.query(
@@ -593,7 +587,7 @@ function App(){
   }, [sessions, user]);
 
   if(!fbReady){
-    return <div style={{flex:1, display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text-muted)"}}>Carregando…</div>;
+    return <div style={{flex:1, display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text-muted)"}}>Conectando aos servidores...</div>;
   }
 
   if(!user){
@@ -621,7 +615,18 @@ function App(){
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+function startApp() {
+  const rootElem = document.getElementById("root");
+  if (rootElem && window.React && window.ReactDOM) {
+    ReactDOM.createRoot(rootElem).render(<App />);
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", startApp);
+} else {
+  startApp();
+}
 </script>
 </body>
 </html>
